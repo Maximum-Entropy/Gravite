@@ -1,0 +1,19 @@
+[WIDTH]
+-- window width (pixels):
+1600
+
+[HEIGHT]
+-- window height (pixels):
+900
+
+[showTrail]
+-- particles leave trails (WARNING: buggy):
+false
+
+[showLabel]
+-- particles/planets are labeled by name:
+true
+
+[foregroundValidation]
+-- particles nearer to camera appear in front (WARNING: may cause lag):
+true

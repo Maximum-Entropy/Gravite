@@ -1,0 +1,39 @@
+[FRAMELENGTH]
+-- simulation-seconds per calculation:
+1.8
+
+[MAX_FRAMES]
+-- maximum duration (# frames of length FRAMELENGTH) of simulation:
+1e7
+
+[NUM_PARTICLES]
+-- number of particles ("random" preset only):
+650
+
+[G]
+-- gravitational constant (m^3 kg^-1 s^-2) (Actual: 6.67408e-11):
+6.67408e-11
+
+[PRESET]
+-- "random," "lunar_orbit," or "solar_system":
+random
+
+[MAX_INITIAL_SPREAD]
+-- max initial distance (m) between particles ("random" preset only):
+400
+
+[MAX_INITIAL_SPEED]
+-- max initial speed (m s^-1) of particles ("random" preset only):
+.5
+
+[MASS]
+-- default mass (kg) of particles ("random" preset only):
+2e9
+
+[RADIUS]
+-- default radius (m) of particles ("random" preset only):
+3
+
+//----------------------------------------------------------\\
+| **NOTE** may use exponential notation (EX: 5012 = 50.12e2) |
+\\----------------------------------------------------------//
