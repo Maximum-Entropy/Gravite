@@ -29,99 +29,6 @@ public class Simulation {
 
 	private static double frame;
 
-	// Main simulation flow
-	public static void main(String[] args) {
-		long startTime = System.nanoTime();
-
-		verifySettings();
-
-		// General initialization
-		particles = new ArrayList<Particle>();
-		generateInitialParticles(PRESET);
-		display = new DisplayPanel(particles);
-		display.show();
-
-		// TODO
-		int barProgress = 0;
-		System.out.println("|--------------------PROGRESS--------------------|");
-
-		for (frame = 1; frame <= MAX_FRAMES; frame++) {
-
-			// try {
-			// Thread.sleep(1);
-			// } catch (InterruptedException e) {
-			// // TODO Auto-generated catch block
-			// e.printStackTrace();
-			// }
-
-			particleWorkset = new ArrayList<Particle>(particles);
-
-			for (int i = 0; i <= particleWorkset.size() - 2; i++)
-				for (int j = i + 1; j <= particleWorkset.size() - 1; j++) {
-					adjustVelocity(particleWorkset.get(i), particleWorkset.get(j));
-					adjustVelocity(particleWorkset.get(j), particleWorkset.get(i));
-				}
-
-			for (Particle p : particleWorkset)
-				adjustPosition(p);
-
-			display.repaint();
-
-			double progress = 100 * (frame / MAX_FRAMES);
-			while (barProgress < progress) {
-				System.out.print(">");
-				barProgress += 2;
-			}
-		}
-
-		System.out.println("\nElapsed Time (ns): " + (System.nanoTime() - startTime));
-	}
-
-	private static void verifySettings() {
-		try {
-			Scanner fileIn = new Scanner(new File("SimulationSettings.txt"));
-			fileIn.nextLine();
-			fileIn.nextLine();
-			FRAMELENGTH = Double.parseDouble(fileIn.nextLine());
-			fileIn.nextLine();
-			fileIn.nextLine();
-			fileIn.nextLine();
-			MAX_FRAMES = Double.parseDouble(fileIn.nextLine());
-			fileIn.nextLine();
-			fileIn.nextLine();
-			fileIn.nextLine();
-			NUM_PARTICLES = Double.parseDouble(fileIn.nextLine());
-			fileIn.nextLine();
-			fileIn.nextLine();
-			fileIn.nextLine();
-			G = Double.parseDouble(fileIn.nextLine());
-			fileIn.nextLine();
-			fileIn.nextLine();
-			fileIn.nextLine();
-			PRESET = fileIn.nextLine();
-			fileIn.nextLine();
-			fileIn.nextLine();
-			fileIn.nextLine();
-			MAX_INITIAL_SPREAD = Double.parseDouble(fileIn.nextLine());
-			fileIn.nextLine();
-			fileIn.nextLine();
-			fileIn.nextLine();
-			MAX_INITIAL_SPEED = Double.parseDouble(fileIn.nextLine());
-			fileIn.nextLine();
-			fileIn.nextLine();
-			fileIn.nextLine();
-			MASS = Double.parseDouble(fileIn.nextLine());
-			fileIn.nextLine();
-			fileIn.nextLine();
-			fileIn.nextLine();
-			RADIUS = Double.parseDouble(fileIn.nextLine());
-			fileIn.close();
-		} catch (FileNotFoundException e) {
-			JOptionPane.showMessageDialog(null, "SimulationSettings.txt file not found.");
-			e.printStackTrace();
-		}
-	}
-
 	// TEMP
 	private static void adjustPosition(Particle particle) {
 		for (int i = 0; i <= 2; i++) {
@@ -136,36 +43,22 @@ public class Simulation {
 		for (int i = 0; i <= 2; i++) {
 			focusParticle.getVelocity()[i] += (accelerationArray[i] * FRAMELENGTH);
 		}
+
+		if (getMagnitude(focusParticle.getVelocity()) > 2.998e8) {
+			diluteVelocity(focusParticle);
+		}
 	}
 
-	// TEMP
-	private static double[] getAccelerationArray(Particle focusParticle, Particle periParticle) {
-		double m = focusParticle.getMass();
-		double[] FGravityArray = getFGravityArray(focusParticle, periParticle);
+	// Adjust velocity matrix to consider approximate effects of Lorentz Force
+	private static void diluteVelocity(Particle focusParticle) {
 
-		return new double[] { FGravityArray[0] / m, FGravityArray[1] / m, FGravityArray[2] / m };
-	}
+		// focusParticle.getVelocity()
+		double proportionalityConstant = 2.998e8D / getMagnitude(focusParticle.getVelocity());
 
-	// TEMP
-	private static double[] getFGravityArray(Particle focusParticle, Particle periParticle) {
-		double m1 = focusParticle.getMass();
-		double m2 = periParticle.getMass();
-
-		double[] displacementArray = getDisplacementMatrix(focusParticle, periParticle);
-		double r = getMagnitude(displacementArray);
-
-		double fGravityMagnitude = G * (m1 * m2) / (Math.pow(r, 2));
-		double proportionalityConstant = fGravityMagnitude / r;
-
-		return new double[] { proportionalityConstant * displacementArray[0],
-				proportionalityConstant * displacementArray[1], proportionalityConstant * displacementArray[2] };
-	}
-
-	// TEMP
-	private static double[] getDisplacementMatrix(Particle focusParticle, Particle periParticle) {
-		return new double[] { periParticle.getPosition()[0] - focusParticle.getPosition()[0],
-				periParticle.getPosition()[1] - focusParticle.getPosition()[1],
-				periParticle.getPosition()[2] - focusParticle.getPosition()[2] };
+		for (int i = 0; i <= 2; i++) {
+			focusParticle.getVelocity()[i] *= proportionalityConstant;
+		}
+		// ^WARNING: Possible source of gradual inaccuracy
 	}
 
 	// Returns set of particles generated as specified by settings
@@ -258,8 +151,47 @@ public class Simulation {
 			// Change screen fitting target
 			Particle POV_PLANET = uranus;
 			MAX_INITIAL_SPREAD = 2
-					* Math.sqrt(Math.pow(POV_PLANET.getPosition()[0], 2) + Math.pow(POV_PLANET.getPosition()[1], 2)) - 2e12;
+					* Math.sqrt(Math.pow(POV_PLANET.getPosition()[0], 2) + Math.pow(POV_PLANET.getPosition()[1], 2))
+					- 2e12;
 		}
+	}
+
+	// TEMP
+	private static double[] getAccelerationArray(Particle focusParticle, Particle periParticle) {
+		double m = focusParticle.getMass();
+		double[] FGravityArray = getFGravityArray(focusParticle, periParticle);
+
+		return new double[] { FGravityArray[0] / m, FGravityArray[1] / m, FGravityArray[2] / m };
+	}
+
+	// TEMP
+	private static double[] getDisplacementMatrix(Particle focusParticle, Particle periParticle) {
+		return new double[] { periParticle.getPosition()[0] - focusParticle.getPosition()[0],
+				periParticle.getPosition()[1] - focusParticle.getPosition()[1],
+				periParticle.getPosition()[2] - focusParticle.getPosition()[2] };
+	}
+
+	// TEMP
+	private static double[] getFGravityArray(Particle focusParticle, Particle periParticle) {
+		double m1 = focusParticle.getMass();
+		double m2 = periParticle.getMass();
+
+		double[] displacementArray = getDisplacementMatrix(focusParticle, periParticle);
+		double r = getMagnitude(displacementArray);
+
+		double fGravityMagnitude = G * (m1 * m2) / (Math.pow(r, 2));
+		double proportionalityConstant = fGravityMagnitude / r;
+
+		return new double[] { proportionalityConstant * displacementArray[0],
+				proportionalityConstant * displacementArray[1], proportionalityConstant * displacementArray[2] };
+	}
+
+	public static double getFrame() {
+		return frame;
+	}
+
+	public static double getFramelength() {
+		return FRAMELENGTH;
 	}
 
 	// Returns length of parameter vector
@@ -267,24 +199,109 @@ public class Simulation {
 		return Math.sqrt(Math.pow(vec[0], 2) + Math.pow(vec[1], 2) + Math.pow(vec[2], 2));
 	}
 
+	public static double getMaxFrames() {
+		return MAX_FRAMES;
+	}
+
 	public static double getMaxInitialSpread() {
 		return MAX_INITIAL_SPREAD;
-	}
-
-	public static double getFramelength() {
-		return FRAMELENGTH;
-	}
-
-	public static double getFrame() {
-		return frame;
 	}
 
 	public static String getPreset() {
 		return PRESET;
 	}
 
-	public static double getMaxFrames() {
-		return MAX_FRAMES;
+	// Main simulation flow
+	public static void main(String[] args) {
+		long startTime = System.nanoTime();
+
+		verifySettings();
+
+		// General initialization
+		particles = new ArrayList<Particle>();
+		generateInitialParticles(PRESET);
+		display = new DisplayPanel(particles);
+		display.show();
+
+		// TODO
+		int barProgress = 0;
+		System.out.println("|--------------------PROGRESS--------------------|");
+
+		for (frame = 1; frame <= MAX_FRAMES; frame++) {
+
+			// try {
+			// Thread.sleep(1);
+			// } catch (InterruptedException e) {
+			// // TODO Auto-generated catch block
+			// e.printStackTrace();
+			// }
+
+			particleWorkset = new ArrayList<Particle>(particles);
+
+			for (int i = 0; i <= particleWorkset.size() - 2; i++)
+				for (int j = i + 1; j <= particleWorkset.size() - 1; j++) {
+					adjustVelocity(particleWorkset.get(i), particleWorkset.get(j));
+					adjustVelocity(particleWorkset.get(j), particleWorkset.get(i));
+				}
+
+			for (Particle p : particleWorkset)
+				adjustPosition(p);
+
+			display.repaint();
+
+			double progress = 100 * (frame / MAX_FRAMES);
+			while (barProgress < progress) {
+				System.out.print(">");
+				barProgress += 2;
+			}
+		}
+
+		System.out.println("\nElapsed Time (ns): " + (System.nanoTime() - startTime));
+	}
+
+	private static void verifySettings() {
+		try {
+			Scanner fileIn = new Scanner(new File("SimulationSettings.txt"));
+			fileIn.nextLine();
+			fileIn.nextLine();
+			FRAMELENGTH = Double.parseDouble(fileIn.nextLine());
+			fileIn.nextLine();
+			fileIn.nextLine();
+			fileIn.nextLine();
+			MAX_FRAMES = Double.parseDouble(fileIn.nextLine());
+			fileIn.nextLine();
+			fileIn.nextLine();
+			fileIn.nextLine();
+			NUM_PARTICLES = Double.parseDouble(fileIn.nextLine());
+			fileIn.nextLine();
+			fileIn.nextLine();
+			fileIn.nextLine();
+			G = Double.parseDouble(fileIn.nextLine());
+			fileIn.nextLine();
+			fileIn.nextLine();
+			fileIn.nextLine();
+			PRESET = fileIn.nextLine();
+			fileIn.nextLine();
+			fileIn.nextLine();
+			fileIn.nextLine();
+			MAX_INITIAL_SPREAD = Double.parseDouble(fileIn.nextLine());
+			fileIn.nextLine();
+			fileIn.nextLine();
+			fileIn.nextLine();
+			MAX_INITIAL_SPEED = Double.parseDouble(fileIn.nextLine());
+			fileIn.nextLine();
+			fileIn.nextLine();
+			fileIn.nextLine();
+			MASS = Double.parseDouble(fileIn.nextLine());
+			fileIn.nextLine();
+			fileIn.nextLine();
+			fileIn.nextLine();
+			RADIUS = Double.parseDouble(fileIn.nextLine());
+			fileIn.close();
+		} catch (FileNotFoundException e) {
+			JOptionPane.showMessageDialog(null, "SimulationSettings.txt file not found.");
+			e.printStackTrace();
+		}
 	}
 
 }
